@@ -27,6 +27,7 @@ var existingComments = [
         "authorAvatarUrl": "../support/images/clay_davis.png",
         "authorName": "Senator Clay Davis",
         "authorId": 3,
+        "starred": true,
         "comment": "These Side Comments are incredible. Sssshhhiiiiieeeee."
       }
     ]

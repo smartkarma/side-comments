@@ -1,4 +1,5 @@
-<li data-comment-id="<%= comment.id %>">
+<% markedClass = comment.starred ? 'starred' : '' %>
+<li data-comment-id="<%= comment.id %>" class="<%= markedClass %>">
   <div class="author-avatar">
     <img src="<%= comment.authorAvatarUrl %>">
   </div>

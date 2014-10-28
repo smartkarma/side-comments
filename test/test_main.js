@@ -246,6 +246,12 @@ describe("SideComments", function() {
       expect($authorName.prop('tagName').toLowerCase()).to.eq('a');
     });
 
+    it("should have a 'starred' class for comments that have 'starred' attribute true", function(){
+      $section3.find('.marker').trigger('click');
+      var $commentItem = $section3.find('li[data-comment-id]').eq(0);
+      expect($commentItem.hasClass('starred')).to.be.true;
+    });
+
 	});
 
   describe("New Comment Posting", function(){
