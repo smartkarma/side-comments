@@ -1,44 +1,45 @@
-
 /**
- * Require the given path.
+ * Require the module at `name`.
  *
- * @param {String} path
+ * @param {String} name
  * @return {Object} exports
  * @api public
  */
 
-function require(path, parent, orig) {
-  var resolved = require.resolve(path);
+function require(name) {
+  var module = require.modules[name];
+  if (!module) throw new Error('failed to require "' + name + '"');
 
-  // lookup failed
-  if (null == resolved) {
-    orig = orig || path;
-    parent = parent || 'root';
-    var err = new Error('Failed to require "' + orig + '" from "' + parent + '"');
-    err.path = orig;
-    err.parent = parent;
-    err.require = true;
-    throw err;
-  }
-
-  var module = require.modules[resolved];
-
-  // perform real require()
-  // by invoking the module's
-  // registered function
-  if (!module._resolving && !module.exports) {
-    var mod = {};
-    mod.exports = {};
-    mod.client = mod.component = true;
-    module._resolving = true;
-    module.call(this, mod.exports, require.relative(resolved), mod);
-    delete module._resolving;
-    module.exports = mod.exports;
+  if (!('exports' in module) && typeof module.definition === 'function') {
+    module.client = module.component = true;
+    module.definition.call(this, module.exports = {}, module);
+    delete module.definition;
   }
 
   return module.exports;
 }
 
+/**
+ * Meta info, accessible in the global scope unless you use AMD option.
+ */
+
+require.loader = 'component';
+
+/**
+ * Find and require a module which name starts with the provided name.
+ * If multiple modules exists, the highest semver is used. 
+ * This function should be used for remote dependencies.
+ */
+
+require.latest = function (name) {
+  var available = Object.keys(require.modules).filter(function(moduleName) {
+    return moduleName.indexOf(name) !== -1
+  });
+  if (available.length === 0) {
+    throw new Error('failed to find latest module of "' + name + '"');
+  }
+  return require(available.sort().pop());
+}
 /**
  * Registered modules.
  */
@@ -46,160 +47,33 @@ function require(path, parent, orig) {
 require.modules = {};
 
 /**
- * Registered aliases.
- */
-
-require.aliases = {};
-
-/**
- * Resolve `path`.
+ * Register module at `name` with callback `definition`.
  *
- * Lookup:
- *
- *   - PATH/index.js
- *   - PATH.js
- *   - PATH
- *
- * @param {String} path
- * @return {String} path or null
- * @api private
- */
-
-require.resolve = function(path) {
-  if (path.charAt(0) === '/') path = path.slice(1);
-
-  var paths = [
-    path,
-    path + '.js',
-    path + '.json',
-    path + '/index.js',
-    path + '/index.json'
-  ];
-
-  for (var i = 0; i < paths.length; i++) {
-    var path = paths[i];
-    if (require.modules.hasOwnProperty(path)) return path;
-    if (require.aliases.hasOwnProperty(path)) return require.aliases[path];
-  }
-};
-
-/**
- * Normalize `path` relative to the current path.
- *
- * @param {String} curr
- * @param {String} path
- * @return {String}
- * @api private
- */
-
-require.normalize = function(curr, path) {
-  var segs = [];
-
-  if ('.' != path.charAt(0)) return path;
-
-  curr = curr.split('/');
-  path = path.split('/');
-
-  for (var i = 0; i < path.length; ++i) {
-    if ('..' == path[i]) {
-      curr.pop();
-    } else if ('.' != path[i] && '' != path[i]) {
-      segs.push(path[i]);
-    }
-  }
-
-  return curr.concat(segs).join('/');
-};
-
-/**
- * Register module at `path` with callback `definition`.
- *
- * @param {String} path
+ * @param {String} name
  * @param {Function} definition
  * @api private
  */
 
-require.register = function(path, definition) {
-  require.modules[path] = definition;
+require.register = function (name, definition) {
+  require.modules[name] = {
+    definition: definition
+  };
 };
 
 /**
- * Alias a module definition.
+ * Define a module's exports immediately with `exports`.
  *
- * @param {String} from
- * @param {String} to
+ * @param {String} name
+ * @param {Generic} exports
  * @api private
  */
 
-require.alias = function(from, to) {
-  if (!require.modules.hasOwnProperty(from)) {
-    throw new Error('Failed to alias "' + from + '", it does not exist');
-  }
-  require.aliases[to] = from;
-};
-
-/**
- * Return a require function relative to the `parent` path.
- *
- * @param {String} parent
- * @return {Function}
- * @api private
- */
-
-require.relative = function(parent) {
-  var p = require.normalize(parent, '..');
-
-  /**
-   * lastIndexOf helper.
-   */
-
-  function lastIndexOf(arr, obj) {
-    var i = arr.length;
-    while (i--) {
-      if (arr[i] === obj) return i;
-    }
-    return -1;
-  }
-
-  /**
-   * The relative require() itself.
-   */
-
-  function localRequire(path) {
-    var resolved = localRequire.resolve(path);
-    return require(resolved, parent, path);
-  }
-
-  /**
-   * Resolve relative to the parent.
-   */
-
-  localRequire.resolve = function(path) {
-    var c = path.charAt(0);
-    if ('/' == c) return path.slice(1);
-    if ('.' == c) return require.normalize(p, path);
-
-    // resolve deps by returning
-    // the dep in the nearest "deps"
-    // directory
-    var segs = parent.split('/');
-    var i = lastIndexOf(segs, 'deps') + 1;
-    if (!i) i = 0;
-    path = segs.slice(0, i + 1).join('/') + '/deps/' + path;
-    return path;
+require.define = function (name, exports) {
+  require.modules[name] = {
+    exports: exports
   };
-
-  /**
-   * Check if module is defined at `path`.
-   */
-
-  localRequire.exists = function(path) {
-    return require.modules.hasOwnProperty(localRequire.resolve(path));
-  };
-
-  return localRequire;
 };
-require.register("component-emitter/index.js", function(exports, require, module){
+require.register("component~emitter@1.1.3", function (exports, module) {
 
 /**
  * Expose `Emitter`.
@@ -366,10 +240,11 @@ Emitter.prototype.hasListeners = function(event){
 };
 
 });
-require.register("side-comments/js/main.js", function(exports, require, module){
-var _ = require('./vendor/lodash-custom.js');
-var Section = require('./section.js');
-var Emitter = require('emitter');
+
+require.register("side-comments", function (exports, module) {
+var _ = require('side-comments/js/vendor/lodash-custom.js');
+var Section = require('side-comments/js/section.js');
+var Emitter = require('component~emitter@1.1.3');
 var $ = jQuery;
 
 /**
@@ -401,6 +276,7 @@ function SideComments( el, currentUser, existingComments ) {
   this.eventPipe.on('sectionSelected', _.bind(this.sectionSelected, this));
   this.eventPipe.on('sectionDeselected', _.bind(this.sectionDeselected, this));
   this.eventPipe.on('commentPosted', _.bind(this.commentPosted, this));
+  this.eventPipe.on('commentStarred', _.bind(this.commentStarred, this));
   this.eventPipe.on('commentDeleted', _.bind(this.commentDeleted, this));
   this.eventPipe.on('addCommentAttempted', _.bind(this.addCommentAttempted, this));
   this.$body.on('click', _.bind(this.bodyClick, this));
@@ -474,6 +350,14 @@ SideComments.prototype.commentPosted = function( comment ) {
 };
 
 /**
+ * Fired when the commentStarred event is triggered.
+ * @param  {Object} comment  The comment object to be starred.
+ */
+SideComments.prototype.commentStarred = function( comment ) {
+  this.emit('commentStarred', comment);
+};
+
+/**
  * Fired when the commentDeleted event is triggered.
  * @param  {Object} comment  The commentId of the deleted comment.
  */
@@ -516,6 +400,16 @@ SideComments.prototype.removeComment = function( sectionId, commentId ) {
 SideComments.prototype.deleteComment = function( sectionId, commentId ) {
   var section = _.find(this.sections, { id: sectionId });
   section.deleteComment(commentId);
+};
+
+/**
+ * Star the comment specified by the given sectionID and commentID.
+ * @param sectionId The section the comment belongs to.
+ * @param commentId The comment's ID
+ */
+SideComments.prototype.starComment = function( sectionId, commentId ) {
+  var section = _.find(this.sections, { id: sectionId });
+  section.markAsStarred(commentId);
 };
 
 /**
@@ -575,11 +469,12 @@ SideComments.prototype.destroy = function() {
 module.exports = SideComments;
 
 });
-require.register("side-comments/js/section.js", function(exports, require, module){
-var _ = require('./vendor/lodash-custom.js');
-var Template = require('../templates/section.html');
-var CommentTemplate = require('../templates/comment.html');
-var mobileCheck = require('./helpers/mobile-check.js');
+
+require.register("side-comments/js/section.js", function (exports, module) {
+var _ = require('side-comments/js/vendor/lodash-custom.js');
+var Template = require('side-comments/templates/section.html');
+var CommentTemplate = require('side-comments/templates/comment.html');
+var mobileCheck = require('side-comments/js/helpers/mobile-check.js');
 var $ = jQuery;
 
 /**
@@ -602,6 +497,7 @@ function Section( eventPipe, $el, currentUser, comments ) {
 	this.$el.on(this.clickEventName, '.side-comment .post', _.bind(this.postCommentClick, this));
 	this.$el.on(this.clickEventName, '.side-comment .cancel', _.bind(this.cancelCommentClick, this));
 	this.$el.on(this.clickEventName, '.side-comment .delete', _.bind(this.deleteCommentClick, this));
+	this.$el.on(this.clickEventName, '.side-comment .star', _.bind(this.starCommentClick, this));
 	this.render();
 }
 
@@ -762,11 +658,47 @@ Section.prototype.deleteComment = function( commentId ) {
  */
 Section.prototype.removeComment = function( commentId ) {
 	this.comments = _.reject(this.comments, { id: commentId });
-	this.$el.find('.side-comment .comments li[data-comment-id="'+commentId+'"]').remove();
+	this.findCommentEl(commentId).remove();
 	this.updateCommentCount();
 	if (this.comments.length < 1) {
 		this.$el.find('.side-comment').removeClass('has-comments');
 	}
+};
+
+/**
+ * Find Comment element Event handler for star comment clicks.
+ * @param commentId The ID of the comment
+ */
+Section.prototype.findCommentEl = function( commentId ) {
+  return this.$el.find('.side-comment .comments li[data-comment-id="'+commentId+'"]');
+}
+
+/**
+ * Event handler for star comment clicks.
+ * @param  {Object} event The event object.
+ */
+Section.prototype.starCommentClick = function( event ) {
+	event.preventDefault();
+	var commentId = $(event.target).closest('li').data('comment-id');
+
+	this.starComment(commentId);
+};
+
+/**
+ * Finds the comment and emits an event with the comment to be starred.
+ */
+Section.prototype.starComment = function( commentId ) {
+	var comment = _.find(this.comments, { id: commentId });
+	comment.sectionId = this.id;
+	this.eventPipe.emit('commentStarred', comment);
+};
+
+/**
+ * Mark the comment as starred.
+ */
+Section.prototype.markAsStarred = function( commentId ) {
+	var commentEl = this.findCommentEl(commentId);
+  commentEl.addClass('starred');
 };
 
 /**
@@ -838,7 +770,8 @@ Section.prototype.destroy = function() {
 
 module.exports = Section;
 });
-require.register("side-comments/js/vendor/lodash-custom.js", function(exports, require, module){
+
+require.register("side-comments/js/vendor/lodash-custom.js", function (exports, module) {
 /**
  * @license
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
@@ -3231,7 +3164,8 @@ require.register("side-comments/js/vendor/lodash-custom.js", function(exports, r
 }.call(this));
 
 });
-require.register("side-comments/js/helpers/mobile-check.js", function(exports, require, module){
+
+require.register("side-comments/js/helpers/mobile-check.js", function (exports, module) {
 module.exports = function() {
 	var check = false;
 	(function(a){if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows (ce|phone)|xda|xiino/i.test(a)||/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0,4)))check = true})(navigator.userAgent||navigator.vendor||window.opera);
@@ -3239,13 +3173,8 @@ module.exports = function() {
 }
 });
 
-require.register("side-comments/templates/section.html", function(exports, require, module){
-module.exports = '<div class="side-comment <%= sectionClasses %>">\n  <a href="#" class="marker">\n    <span><%= comments.length %></span>\n  </a>\n  \n  <div class="comments-wrapper">\n    <ul class="comments">\n      <% _.each(comments, function( comment ){ %>\n        <%= _.template(commentTemplate, { comment: comment, currentUser: currentUser }) %>\n      <% }) %>\n    </ul>\n    \n    <a href="#" class="add-comment">Leave a comment</a>\n    \n    <% if (currentUser){ %>\n      <div class="comment-form">\n        <div class="author-avatar">\n          <img src="<%= currentUser.avatarUrl %>">\n        </div>\n        <p class="author-name">\n          <%= currentUser.name %>\n        </p>\n        <input type="text" class="comment-box right-of-avatar" placeholder="Leave a comment...">\n        <div class="actions right-of-avatar">\n          <a href="#" class="action-link post">Post</a>\n          <a href="#" class="action-link cancel">Cancel</a>\n        </div>\n      </div>\n    <% } %>\n  </div>\n</div>';
-});
-require.register("side-comments/templates/comment.html", function(exports, require, module){
-module.exports = '<li data-comment-id="<%= comment.id %>">\n  <div class="author-avatar">\n    <img src="<%= comment.authorAvatarUrl %>">\n  </div>\n  <% if (comment.authorUrl) { %>\n    <a class="author-name right-of-avatar" href="<%= comment.authorUrl %>">\n      <%= comment.authorName %>\n    </a>\n  <% } else { %>\n    <p class="author-name right-of-avatar">\n      <%= comment.authorName %>\n    </p>\n  <% } %>\n  <p class="comment right-of-avatar">\n    <%= comment.comment %>\n  </p>\n  <% if (currentUser && comment.authorId === currentUser.id){ %>\n  <a href="#" class="action-link delete">Delete</a>\n  <% } %>\n</li>';
-});
-require.alias("component-emitter/index.js", "side-comments/deps/emitter/index.js");
-require.alias("component-emitter/index.js", "emitter/index.js");
+require.define("side-comments/templates/section.html", "<div class=\"side-comment <%= sectionClasses %>\">\n  <a href=\"#\" class=\"marker\">\n    <span><%= comments.length %></span>\n  </a>\n  \n  <div class=\"comments-wrapper\">\n    <ul class=\"comments\">\n      <% _.each(comments, function( comment ){ %>\n        <%= _.template(commentTemplate, { comment: comment, currentUser: currentUser }) %>\n      <% }) %>\n    </ul>\n    \n    <a href=\"#\" class=\"add-comment\">Leave a comment</a>\n    \n    <% if (currentUser){ %>\n      <div class=\"comment-form\">\n        <div class=\"author-avatar\">\n          <img src=\"<%= currentUser.avatarUrl %>\">\n        </div>\n        <p class=\"author-name\">\n          <%= currentUser.name %>\n        </p>\n        <input type=\"text\" class=\"comment-box right-of-avatar\" placeholder=\"Leave a comment...\">\n        <div class=\"actions right-of-avatar\">\n          <a href=\"#\" class=\"action-link post\">Post</a>\n          <a href=\"#\" class=\"action-link cancel\">Cancel</a>\n        </div>\n      </div>\n    <% } %>\n  </div>\n</div>");
 
-require.alias("side-comments/js/main.js", "side-comments/index.js");
+require.define("side-comments/templates/comment.html", "<% markedClass = comment.starred ? 'starred' : '' %>\n<li data-comment-id=\"<%= comment.id %>\" class=\"<%= markedClass %>\">\n  <div class=\"author-avatar\">\n    <img src=\"<%= comment.authorAvatarUrl %>\">\n  </div>\n  <% if (comment.authorUrl) { %>\n    <a class=\"author-name right-of-avatar\" href=\"<%= comment.authorUrl %>\">\n      <%= comment.authorName %>\n    </a>\n  <% } else { %>\n    <p class=\"author-name right-of-avatar\">\n      <%= comment.authorName %>\n    </p>\n  <% } %>\n  <p class=\"comment right-of-avatar\">\n    <%= comment.comment %>\n  </p>\n  <% if (currentUser && comment.authorId === currentUser.id){ %>\n  <a href=\"#\" class=\"action-link delete\">Delete</a>\n  <% } else { %>\n    <% if (currentUser && currentUser.isTheAuthor){ %>\n      <a href=\"#\" class=\"action-link star\">Like this</a>\n    <% } %>\n  <% } %>\n</li>");
+
+require("side-comments");
