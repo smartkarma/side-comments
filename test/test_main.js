@@ -14,7 +14,7 @@ var $section3;
 var newTestComment = {
   id: 278,
   authorId: 1,
-  authorAvatarUrl: "support/images/user/png",
+  authorAvatarUrl: "../support/images/user.png",
   authorName: "New Test Commenter",
   comment: "This is a test comment."
 };
