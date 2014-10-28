@@ -32,6 +32,7 @@ function SideComments( el, currentUser, existingComments ) {
   this.eventPipe.on('sectionSelected', _.bind(this.sectionSelected, this));
   this.eventPipe.on('sectionDeselected', _.bind(this.sectionDeselected, this));
   this.eventPipe.on('commentPosted', _.bind(this.commentPosted, this));
+  this.eventPipe.on('commentStarred', _.bind(this.commentStarred, this));
   this.eventPipe.on('commentDeleted', _.bind(this.commentDeleted, this));
   this.eventPipe.on('addCommentAttempted', _.bind(this.addCommentAttempted, this));
   this.$body.on('click', _.bind(this.bodyClick, this));
@@ -105,6 +106,14 @@ SideComments.prototype.commentPosted = function( comment ) {
 };
 
 /**
+ * Fired when the commentStarred event is triggered.
+ * @param  {Object} comment  The comment object to be starred.
+ */
+SideComments.prototype.commentStarred = function( comment ) {
+  this.emit('commentStarred', comment);
+};
+
+/**
  * Fired when the commentDeleted event is triggered.
  * @param  {Object} comment  The commentId of the deleted comment.
  */
@@ -147,6 +156,16 @@ SideComments.prototype.removeComment = function( sectionId, commentId ) {
 SideComments.prototype.deleteComment = function( sectionId, commentId ) {
   var section = _.find(this.sections, { id: sectionId });
   section.deleteComment(commentId);
+};
+
+/**
+ * Star the comment specified by the given sectionID and commentID.
+ * @param sectionId The section the comment belongs to.
+ * @param commentId The comment's ID
+ */
+SideComments.prototype.starComment = function( sectionId, commentId ) {
+  var section = _.find(this.sections, { id: sectionId });
+  section.markAsStarred(commentId);
 };
 
 /**

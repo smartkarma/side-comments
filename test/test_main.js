@@ -318,6 +318,62 @@ describe("SideComments", function() {
     });
   });
 
+  describe("Comment Starring", function(){
+
+    beforeEach(function( done ) {
+      setupSideComments();
+      setSections();
+      done();
+    });
+
+    it("should emmit an event when a comment is starred", function( done ) {
+      this.timeout(0);
+      var eventFired = false;
+
+      setTimeout( function() {
+        check( done, function() {
+          expect(eventFired).to.be.true;
+        });
+      }, 500);
+
+      sideComments.on('commentStarred', function( comment ) {
+        eventFired = true;
+      });
+
+      sideComments.sections[0].starComment(88);
+    });
+
+    it("should mark the comment", function() {
+      sideComments.starComment(1, 112);
+      var $commentItem = $section1.find('li[data-comment-id]').eq(1);
+      expect($commentItem.hasClass('starred')).to.be.true;
+    });
+
+    it("should not have 'Like this' link", function() {
+      $section1.find('.marker').trigger('click');
+      expect($section1.find('.action-link.star').is(':visible')).to.be.false;
+    });
+
+    describe("as the author", function() {
+
+      beforeEach(function( done ) {
+        var currentUserToPass = _.clone(currentUser);
+
+        currentUserToPass.isTheAuthor = true;
+        setupSideComments(currentUserToPass);
+        setSections();
+        done();
+      });
+
+      it("should have 'Like this' link", function() {
+        $section1.find('.marker').trigger('click');
+        expect($section1.find('.action-link.star')).to.not.be.empty;
+      });
+
+    });
+
+  });
+
   describe("Comment Deleting", function(){
     
     beforeEach(function( done ) {

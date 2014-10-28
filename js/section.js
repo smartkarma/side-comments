@@ -24,6 +24,7 @@ function Section( eventPipe, $el, currentUser, comments ) {
 	this.$el.on(this.clickEventName, '.side-comment .post', _.bind(this.postCommentClick, this));
 	this.$el.on(this.clickEventName, '.side-comment .cancel', _.bind(this.cancelCommentClick, this));
 	this.$el.on(this.clickEventName, '.side-comment .delete', _.bind(this.deleteCommentClick, this));
+	this.$el.on(this.clickEventName, '.side-comment .star', _.bind(this.starCommentClick, this));
 	this.render();
 }
 
@@ -184,11 +185,47 @@ Section.prototype.deleteComment = function( commentId ) {
  */
 Section.prototype.removeComment = function( commentId ) {
 	this.comments = _.reject(this.comments, { id: commentId });
-	this.$el.find('.side-comment .comments li[data-comment-id="'+commentId+'"]').remove();
+	this.findCommentEl(commentId).remove();
 	this.updateCommentCount();
 	if (this.comments.length < 1) {
 		this.$el.find('.side-comment').removeClass('has-comments');
 	}
+};
+
+/**
+ * Find Comment element Event handler for star comment clicks.
+ * @param commentId The ID of the comment
+ */
+Section.prototype.findCommentEl = function( commentId ) {
+  return this.$el.find('.side-comment .comments li[data-comment-id="'+commentId+'"]');
+}
+
+/**
+ * Event handler for star comment clicks.
+ * @param  {Object} event The event object.
+ */
+Section.prototype.starCommentClick = function( event ) {
+	event.preventDefault();
+	var commentId = $(event.target).closest('li').data('comment-id');
+
+	this.starComment(commentId);
+};
+
+/**
+ * Finds the comment and emits an event with the comment to be starred.
+ */
+Section.prototype.starComment = function( commentId ) {
+	var comment = _.find(this.comments, { id: commentId });
+	comment.sectionId = this.id;
+	this.eventPipe.emit('commentStarred', comment);
+};
+
+/**
+ * Mark the comment as starred.
+ */
+Section.prototype.markAsStarred = function( commentId ) {
+	var commentEl = this.findCommentEl(commentId);
+  commentEl.addClass('starred');
 };
 
 /**
