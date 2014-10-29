@@ -224,7 +224,12 @@ Section.prototype.starComment = function( commentId ) {
  * Mark the comment as starred.
  */
 Section.prototype.markAsStarred = function( commentId ) {
+  var comment   = _.find(this.comments, { id: commentId });
 	var commentEl = this.findCommentEl(commentId);
+
+  comment.starred   = true;
+  comment.starrable = false;
+
   commentEl.addClass('starred');
 };
 

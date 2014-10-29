@@ -18,7 +18,7 @@
   <% if (currentUser && comment.authorId === currentUser.id){ %>
   <a href="#" class="action-link delete">Delete</a>
   <% } else { %>
-    <% if (currentUser && currentUser.isTheAuthor){ %>
+    <% if (comment.starrable) { %>
       <a href="#" class="action-link star">Like this</a>
     <% } %>
   <% } %>

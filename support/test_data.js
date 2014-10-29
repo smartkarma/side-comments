@@ -15,6 +15,7 @@ var existingComments = [
         "authorAvatarUrl": "../support/images/donald_draper.png",
         "authorName": "Donald Draper",
         "authorId": 2,
+        "starrable": true,
         "comment": "I need a scotch."
       }
     ]
@@ -28,6 +29,7 @@ var existingComments = [
         "authorName": "Senator Clay Davis",
         "authorId": 3,
         "starred": true,
+        "starrable": false,
         "comment": "These Side Comments are incredible. Sssshhhiiiiieeeee."
       }
     ]

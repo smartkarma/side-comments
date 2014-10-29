@@ -252,6 +252,18 @@ describe("SideComments", function() {
       expect($commentItem.hasClass('starred')).to.be.true;
     });
 
+    it("should not have 'Like this' link for comments which aren't starrable", function() {
+      $section1.find('.marker').trigger('click');
+      var $commentItem = $section1.find('li[data-comment-id]').eq(0);
+      expect($commentItem.find('.action-link.star').is(':visible')).to.be.false;
+    });
+
+    it("should have 'Like this' link for starrable comments", function() {
+      $section1.find('.marker').trigger('click');
+      var $commentItem = $section1.find('li[data-comment-id]').eq(1);
+      expect($commentItem.find('.action-link.star').is(':visible')).to.be.true;
+    });
+
 	});
 
   describe("New Comment Posting", function(){
@@ -349,27 +361,11 @@ describe("SideComments", function() {
       expect($commentItem.hasClass('starred')).to.be.true;
     });
 
-    it("should not have 'Like this' link", function() {
-      $section1.find('.marker').trigger('click');
-      expect($section1.find('.action-link.star').is(':visible')).to.be.false;
-    });
-
-    describe("as the author", function() {
-
-      beforeEach(function( done ) {
-        var currentUserToPass = _.clone(currentUser);
-
-        currentUserToPass.isTheAuthor = true;
-        setupSideComments(currentUserToPass);
-        setSections();
-        done();
-      });
-
-      it("should have 'Like this' link", function() {
-        $section1.find('.marker').trigger('click');
-        expect($section1.find('.action-link.star')).to.not.be.empty;
-      });
-
+    it("should make the comment starred and not starrable", function() {
+      sideComments.starComment(1, 112);
+      var comment = _.find(sideComments.existingComments[0].comments, { id: 112 });
+      expect(comment.starred).to.be.true;
+      expect(comment.starrable).to.be.false;
     });
 
   });
