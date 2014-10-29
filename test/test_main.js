@@ -368,6 +368,13 @@ describe("SideComments", function() {
       expect(comment.starrable).to.be.false;
     });
 
+    it("should remove the 'Like this' link", function() {
+      $section1.find('.marker').trigger('click');
+      sideComments.starComment(1, 112);
+      var $commentItem = $section1.find('li[data-comment-id].starred');
+      expect($commentItem.find('.action-link.star').is(':visible')).to.be.false;
+    });
+
   });
 
   describe("Comment Deleting", function(){

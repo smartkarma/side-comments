@@ -231,6 +231,7 @@ Section.prototype.markAsStarred = function( commentId ) {
   comment.starrable = false;
 
   commentEl.addClass('starred');
+  commentEl.find('.action-link.star').remove();
 };
 
 /**
