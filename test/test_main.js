@@ -46,7 +46,11 @@ function setupSideComments( withCurrentUser ) {
   if (withCurrentUser === undefined || withCurrentUser === true) {
     currentUserToPass = currentUser;
   } else {
-    currentUserToPass = null;
+    if (withCurrentUser) {
+      currentUserToPass = withCurrentUser;
+    } else {
+      currentUserToPass = null;
+    }
   }
 
 	if (sideComments) {
@@ -314,19 +318,67 @@ describe("SideComments", function() {
       expect($section2.find('.marker span').text().trim()).to.equal("1");
     });
 
-    it("should have a link for comments posted by a currentUser that has a authorUrl", function(){
-      sideComments.on('commentPosted', function( comment ) {
-        comment.id = 99;
-        sideComments.insertComment(comment);
+    describe("Posting a real comment", function() {
+
+      beforeEach(function( done ) {
+        sideComments.on('commentPosted', function( comment ) {
+          comment.id = 99;
+          sideComments.insertComment(comment);
+        });
+
+        $section1.find('.marker').trigger('click');
+        $section1.find('.add-comment').trigger('click');
+        $section1.find('.comment-box').val('Test Comment');
+        $section1.find('.action-link.post').trigger('click');
+
+        done();
       });
 
-      $section1.find('.marker').trigger('click');
-      $section1.find('.add-comment').trigger('click');
-      $section1.find('.comment-box').val('Test Comment');
-      $section1.find('.action-link.post').trigger('click');
-      var $lastCommentAuthor = $section1.find('.comments li').last().find('.author-name');
+      it("should have a link for comments posted by a currentUser that has a authorUrl", function(){
+        var $lastCommentAuthor = $section1.find('.comments li').last().find('.author-name');
 
-      expect($lastCommentAuthor.attr('href')).to.eq(currentUser.authorUrl);
+        expect($lastCommentAuthor.attr('href')).to.eq(currentUser.authorUrl);
+      });
+
+      it("should have a 'delete' link", function() {
+        var $lastCommentDeleteLink = $section1.find('.comments li').last().find('.action-link.delete');
+        expect($lastCommentDeleteLink.length).not.to.eq(0);
+      });
+    });
+  });
+
+  describe("As user with type property", function() {
+    var currentUserWithType;
+
+    beforeEach(function( done ) {
+      currentUserWithType = _.clone(currentUser);
+      currentUserWithType.type = 'Client';
+
+      setupSideComments(currentUserWithType);
+      setSections();
+      done();
+    });
+
+    describe("Posting a real comment", function() {
+
+      beforeEach(function( done ) {
+        sideComments.on('commentPosted', function( comment ) {
+          comment.id = 99;
+          sideComments.insertComment(comment);
+        });
+
+        $section1.find('.marker').trigger('click');
+        $section1.find('.add-comment').trigger('click');
+        $section1.find('.comment-box').val('Test Comment');
+        $section1.find('.action-link.post').trigger('click');
+
+        done();
+      });
+
+      it("should have a 'delete' link", function() {
+        var $lastCommentDeleteLink = $section1.find('.comments li').last().find('.action-link.delete');
+        expect($lastCommentDeleteLink.length).not.to.eq(0);
+      });
     });
   });
 

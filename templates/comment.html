@@ -15,7 +15,7 @@
   <p class="comment right-of-avatar">
     <%= comment.comment %>
   </p>
-  <% if (currentUser && comment.authorId === currentUser.id){ %>
+  <% if (currentUser && (comment.authorType === currentUser.type) && (comment.authorId === currentUser.id)){ %>
   <a href="#" class="action-link delete">Delete</a>
   <% } else { %>
     <% if (comment.starrable) { %>

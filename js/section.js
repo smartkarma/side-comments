@@ -127,6 +127,7 @@ Section.prototype.postComment = function() {
   	comment: commentBody,
   	authorAvatarUrl: this.currentUser.avatarUrl,
   	authorName: this.currentUser.name,
+		authorType: this.currentUser.type,
   	authorId: this.currentUser.id,
   	authorUrl: this.currentUser.authorUrl || null
   };
